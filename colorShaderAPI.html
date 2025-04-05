@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Palette Generator (No Shader)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            color: white;
+            background-color: black; /* Simple black background */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 30px; /* Add some padding at the top */
+            padding-bottom: 30px; /* Add padding at bottom */
+            overflow-y: auto; /* Allow scrolling if content overflows */
+        }
+        .container {
+            max-width: 650px; /* Slightly smaller max-width */
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(25, 25, 25, 0.6); /* Darker, slightly transparent background */
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); /* Stronger shadow */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+        }
+
+        /* Input Area Styling */
+        .input-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+         label {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 8px;
+            text-align: center;
+         }
+        #theme-input {
+            width: 90%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+         #theme-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+         }
+
+        .palette-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .palette-info {
+            margin-bottom: 15px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 60px;
+        }
+        #palette-name {
+            font-size: clamp(18px, 4vw, 22px);
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #palette-status {
+            font-size: clamp(12px, 3vw, 14px);
+            color: #bbb;
+            font-style: italic;
+        }
+        .palette-squares {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            min-height: 90px;
+            margin-top: 10px;
+             transition: opacity 0.3s ease-in-out;
+        }
+        .color-square {
+            flex: 1 1 60px; /* Adjusted flex basis */
+            max-width: 100px; /* Adjusted max width */
+            min-height: 80px; /* Adjusted height */
+            margin: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            text-align: center;
+            padding: 8px;
+            border-radius: 10px;
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+             position: relative; /* Needed for absolute positioning of hex */
+             overflow: hidden; /* Hide overflowing hex initially */
+        }
+        .color-square:hover {
+            transform: scale(1.08) translateY(-2px);
+            z-index: 2;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+        .color-hex {
+            background-color: rgba(0, 0, 0, 0.7); /* Darker background for contrast */
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px; /* Smaller font */
+            margin-top: 5px;
+            word-break: break-all;
+            font-family: 'Courier New', Courier, monospace;
+            position: absolute; /* Position at bottom */
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s ease-in-out;
+            white-space: nowrap; /* Prevent wrapping */
+        }
+         .color-square:hover .color-hex {
+            opacity: 1; /* Show on hover */
+         }
+        button#generate-btn {
+            margin-top: 5px;
+            padding: 12px 28px;
+            background-color: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(0, 122, 255, 0.3);
+        }
+        button#generate-btn:hover {
+            background-color: #005ecb;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 12px rgba(0, 122, 255, 0.4);
+        }
+        button#generate-btn:active {
+            transform: translateY(0px);
+             background-color: #004ca8;
+             box-shadow: 0 2px 5px rgba(0, 122, 255, 0.3);
+        }
+        button#generate-btn:disabled {
+            background-color: rgba(100, 100, 100, 0.4);
+            color: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+            border-color: rgba(100, 100, 100, 0.5);
+        }
+        #error-message {
+            display: none;
+        }
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 15px;
+            background-color: rgba(255, 0, 0, 0.15);
+            padding: 10px;
+            border-radius: 6px;
+            width: 90%;
+            box-sizing: border-box;
+        }
+        /* Hide the canvas element as we are not using WebGL */
+        #shader-canvas {
+            display: none;
+            /*
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            transition: opacity 0.5s ease-in-out;
+            opacity: 0;
+            */
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas is present but hidden by CSS -->
+    <canvas id="shader-canvas"></canvas>
+
+    <div class="container">
+        <!-- Input Area -->
+        <div class="input-area">
+             <label for="theme-input">Enter a theme or prompt (e.g., "Midnight Sakura Blossom", or "make the blues brighter" if a palette exists):</label>
+             <input type="text" id="theme-input" placeholder="Describe your desired palette...">
+             <button id="generate-btn">Generate Palette</button>
+        </div>
+
+        <!-- Palette Display Area -->
+        <div class="palette-container">
+            <div class="palette-info">
+                <p id="palette-name">AI Color Palette Generator</p>
+                <p id="palette-status">Enter a theme above and click Generate!</p>
+            </div>
+            <div class="palette-squares" id="palette-squares">
+                <!-- Color squares will be inserted here -->
+            </div>
+            <div id="error-message" class="error"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const API_URL = 'https://gnmc11nwltx0u2-4000.proxy.runpod.net/generate-palette'; // Adjust if needed: 'http://127.0.0.1:8000/generate-palette'
+
+        // --- Global State ---
+        let currentPalette = null; // To store the last generated { theme: string, colors: string[] }
+
+        // --- Palette Handling & Display ---
+
+        function displayPalette(theme, colors) {
+            if (!theme || !Array.isArray(colors) || colors.length === 0) {
+                 console.error("Invalid data passed to displayPalette:", theme, colors);
+                 showError("Received invalid palette data.");
+                 currentPalette = null; // Reset if data is bad
+                 return;
+            }
+
+            // --- Update UI ---
+            document.getElementById('palette-name').textContent = theme;
+            document.getElementById('palette-status').textContent = `Generated Palette (${colors.length} colors)`;
+
+            const paletteSquares = document.getElementById('palette-squares');
+            paletteSquares.innerHTML = ''; // Clear previous squares
+            paletteSquares.style.opacity = 0; // Prepare for fade-in
+
+            const validHexColors = []; // Store only valid hex codes
+
+            colors.forEach(hex => {
+                if (!hex || typeof hex !== 'string' || !hex.match(/^#[0-9a-fA-F]{6}$/)) {
+                    console.warn(`Invalid hex code received: ${hex}. Skipping.`);
+                    return; // Skip invalid colors
+                }
+                validHexColors.push(hex); // Add valid color
+
+                const square = document.createElement('div');
+                square.className = 'color-square';
+                try {
+                     square.style.backgroundColor = hex;
+                } catch(e){
+                    console.error(`Invalid color value for CSS: ${hex}`);
+                    // Optionally skip adding this square or add a placeholder
+                    return;
+                }
+
+                const colorHexDiv = document.createElement('div');
+                colorHexDiv.className = 'color-hex';
+                colorHexDiv.textContent = hex.toUpperCase();
+
+                square.appendChild(colorHexDiv);
+                paletteSquares.appendChild(square);
+            });
+
+            // Fade in the squares
+            requestAnimationFrame(() => {
+                paletteSquares.style.opacity = 1;
+            });
+
+             // --- Store the current valid palette ---
+             if (validHexColors.length > 0) {
+                 currentPalette = { theme: theme, colors: validHexColors };
+             } else {
+                 showError("No valid colors were generated to display.");
+                 currentPalette = null; // Reset if no valid colors
+             }
+        }
+
+
+        // --- API Interaction ---
+        async function generatePaletteFromApi() {
+            const themeInput = document.getElementById('theme-input');
+            const generateBtn = document.getElementById('generate-btn');
+            const theme = themeInput.value.trim();
+
+            if (!theme) {
+                showError("Please enter a theme or modification request.");
+                return;
+            }
+
+            // UI loading state
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+            clearError();
+            document.getElementById('palette-status').textContent = 'Generating colors from AI...';
+            // Don't clear squares immediately, maybe show a loading indicator instead?
+            // Or clear them like this:
+            // document.getElementById('palette-squares').innerHTML = '';
+            // document.getElementById('palette-squares').style.opacity = 0.5; // Dim existing squares while loading?
+
+            try {
+                // Prepare the request body
+                const requestBody = { theme: theme };
+
+                // If a previous palette exists, send it for modification
+                if (currentPalette && currentPalette.colors.length > 0) {
+                    requestBody.previous_palette = currentPalette;
+                    console.log("Sending previous palette for modification:", currentPalette);
+                     document.getElementById('palette-status').textContent = 'Modifying existing palette...';
+                } else {
+                     console.log("Generating new palette for theme:", theme);
+                }
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+                     try {
+                         const errorData = await response.json();
+                         errorMsg = errorData.detail || errorData.error || errorMsg;
+                     } catch (e) { /* Ignore if body isn't JSON */ }
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                     throw new Error(`API returned an error: ${data.error}`);
+                }
+
+                // Use theme from response, might be refined by AI
+                const responseTheme = data.theme || theme;
+                const responseColors = data.colors;
+
+                if (!responseColors || responseColors.length === 0) {
+                    // If modification failed to return colors, maybe keep the old one? Or show error?
+                    // For now, show error.
+                    throw new Error("API returned no colors for this request.");
+                }
+
+                // Success! Display the new/modified palette
+                displayPalette(responseTheme, responseColors);
+
+            } catch (error) {
+                console.error('API Call Error:', error);
+                showError(`Failed to generate palette: ${error.message}`);
+                document.getElementById('palette-name').textContent = 'Error';
+                document.getElementById('palette-status').textContent = 'Failed to generate palette';
+                // We don't need to hide the shader canvas as it's already hidden
+                // Reset currentPalette on error? Maybe not, user might want to retry modification
+                // currentPalette = null;
+            } finally {
+                // Reset UI loading state
+                generateBtn.disabled = false;
+                // Update button text based on whether a palette exists now
+                generateBtn.textContent = currentPalette ? 'Modify Palette' : 'Generate Palette';
+                // themeInput.value = ''; // Optionally clear input after generation
+            }
+        }
+
+        // --- Utility Functions ---
+         function showError(message) {
+             const errorDiv = document.getElementById('error-message');
+             errorDiv.textContent = message;
+             errorDiv.style.display = 'block';
+         }
+
+         function clearError() {
+             const errorDiv = document.getElementById('error-message');
+             errorDiv.textContent = '';
+             errorDiv.style.display = 'none';
+         }
+
+        // --- WebGL Related Functions (Removed/Commented Out) ---
+        /*
+        function setupWebGL() { ... }
+        function compileShader(gl, source, type) { ... }
+        function animate(currentTime) { ... }
+        function stopAnimation() { ... }
+        function resizeCanvas() { ... }
+        function hexToRgb(hex) { // Might be useful later, keep commented?
+            try {
+                 const r = parseInt(hex.slice(1, 3), 16) / 255;
+                 const g = parseInt(hex.slice(3, 5), 16) / 255;
+                 const b = parseInt(hex.slice(5, 7), 16) / 255;
+                 return [r, g, b];
+            } catch (e) {
+                console.error(`Failed to convert hex to RGB: ${hex}`, e);
+                return [0, 0, 0]; // Return black on error
+            }
+        }
+        */
+
+        // --- Initialization and Event Listeners ---
+        function initializeApp() {
+            // We are not setting up WebGL in this version
+            // setupWebGL(); // REMOVED
+
+            const generateBtn = document.getElementById('generate-btn');
+            const themeInput = document.getElementById('theme-input');
+
+            if (!generateBtn || !themeInput) {
+                console.error("Required UI elements not found!");
+                showError("Initialization failed: Missing UI elements.");
+                return;
+            }
+
+            // No WebGL check needed here anymore
+            generateBtn.addEventListener('click', generatePaletteFromApi);
+
+            themeInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    generateBtn.click();
+                }
+            });
+
+            // No resize listener needed for WebGL canvas
+            // window.addEventListener('resize', () => { ... }); // REMOVED
+
+            console.log("Palette Generator Initialized (No WebGL)");
+        }
+
+        // Start the app when the DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
